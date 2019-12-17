@@ -1,7 +1,7 @@
 const path = require('path')
 const express = require('express')
 const xss = require('xss')
-const NotesService = require('./Notes-service')
+const NotesService = require('./notes-service')
 
 const notesRouter = express.Router()
 const jsonParser = express.json()
@@ -10,7 +10,7 @@ const serializeNotes = note => ({
     id: note.id,
     name: note.name,
     date_modified: note.date_modified,
-    folderId: note.folderId,
+    folderId: note.folder_id,
     content: note.content
 })
 
@@ -19,21 +19,21 @@ notesRouter
   .get((req, res, next) => {
     const knexInstance = req.app.get('db')
     NotesService.getAllNotes(knexInstance)
-      .then(notes => {
-        res.json(notes.map(serializeNotes))
+      .then(note => {
+        res.json(note.map(serializeNotes))
       })
       .catch(next)
   })
   .post(jsonParser, (req, res, next) => {
     const { name, date_modified, folderId, content } = req.body
-    const newNote = { name, date_modified, folderId, content }
+    const newNote = { name, date_modified, folder_id:folderId, content }
 
     for (const [key, value] of Object.entries(newNote))
       if (value == null)
         return res.status(400).json({
           error: { message: `Missing '${key}' in request body` }
         })
-    newNote.author = author
+
     NotesService.insertNote(
       req.app.get('db'),
       newNote
@@ -42,7 +42,7 @@ notesRouter
         res
           .status(201)
           .location(path.posix.join(req.originalUrl, `/${note.id}`))
-          .json(serializeNote(note))
+          .json(serializeNotes(note))
       })
       .catch(next)
   })
